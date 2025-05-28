@@ -3,7 +3,6 @@ from functools import wraps
 import json
 from gemini_agent import GeminiAgent
 from db import Database
-from config import USER_CONFIG
 import os
 from dotenv import load_dotenv
 import logging
@@ -140,4 +139,4 @@ def chat():
 
 
 if __name__ == "__main__":
-    app.run(port=os.getenv("PORT", 8000))
+    app.run(port=os.getenv("PORT", 5000))
