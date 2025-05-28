@@ -1,31 +1,41 @@
 # Financial Assistant
 
-A personalized financial assistant that uses Google's Gemini AI to help manage your finances. The assistant can log income and expenses, provide monthly summaries, and fetch currency exchange rates.
+A modern web-based financial assistant that helps users manage their expenses, track income, and get real-time exchange rates using AI-powered conversations.
 
 ## Features
 
-- Log income and expenses with categories
-- Get monthly financial summaries
-- Fetch currency exchange rates
-- Natural language interaction using Gemini AI
-- SQLite database for persistent storage
-- Simple web interface
+- 💬 Natural language chat interface for financial queries
+- 💰 Log expenses and income with categories
+- 📊 View monthly financial summaries
+- 💱 Get real-time exchange rates
+- 🎯 Quick action buttons for common tasks
+- 📱 Responsive design for all devices
+- 🔒 Thread-safe database operations
+
+## Tech Stack
+
+- **Backend**: Python with Flask
+- **Frontend**: HTML, Tailwind CSS, JavaScript
+- **Database**: SQLite with connection pooling
+- **AI**: Google's Gemini Pro API
+- **Exchange Rates**: FastForex API
 
 ## Prerequisites
 
 - Python 3.8 or higher
-- Google Gemini API key
+- Google Cloud API key for Gemini
+- FastForex API key
 
-## Setup
+## Installation
 
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
-cd financial_assistant
+git clone https://github.com/yourusername/function-calling-ai.git
+cd function-calling-ai
 ```
 
-2. Create a virtual environment and activate it:
+2. Create and activate a virtual environment:
 
 ```bash
 python -m venv venv
@@ -38,13 +48,14 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Create a `.env` file in the project root and add your Gemini API key:
+4. Create a `.env` file in the project root:
 
-```
-GEMINI_API_KEY=your_api_key_here
+```env
+GOOGLE_API_KEY=your_gemini_api_key
+FASTFOREX_API_KEY=your_fastforex_api_key
 ```
 
-## Running the Application
+## Usage
 
 1. Start the Flask server:
 
@@ -52,26 +63,74 @@ GEMINI_API_KEY=your_api_key_here
 python app.py
 ```
 
-2. Open your web browser and navigate to `http://localhost:5000`
+2. Open your browser and navigate to `http://localhost:5000`
 
-## Usage
-
-1. Enter your name to create a user profile
-2. Start interacting with the assistant using natural language. Here are some example commands:
-   - "Log an expense of $50 for groceries"
-   - "I received $1000 salary today"
-   - "Show me my monthly summary for March 2024"
-   - "What's the exchange rate from USD to EUR?"
+3. Start chatting with the financial assistant! Try these example queries:
+   - "Log an expense of 100 for food"
+   - "Log income of 500 from salary"
+   - "Show me the monthly summary"
+   - "What is the exchange rate from USD to ETB?"
 
 ## Project Structure
 
-- `app.py`: Flask web application
-- `gemini_agent.py`: Gemini AI integration and function calling
-- `functions.py`: Financial operations and business logic
-- `db.py`: Database models and operations
-- `api.py`: External API integration for currency exchange rates
-- `templates/`: HTML templates for the web interface
+```
+function-calling-ai/
+├── app.py              # Main Flask application
+├── gemini_agent.py     # Gemini AI integration
+├── functions.py        # Financial functions
+├── db.py              # Database operations
+├── api.py             # Exchange rate API
+├── templates/         # HTML templates
+│   └── index.html     # Main dashboard template
+├── static/           # Static assets
+├── requirements.txt   # Python dependencies
+└── .env              # Environment variables
+```
+
+## Features in Detail
+
+### Chat Interface
+
+- Natural language processing for financial queries
+- Real-time response generation
+- Message history with timestamps
+- Loading indicators for better UX
+
+### Financial Management
+
+- Log expenses with categories
+- Track income sources
+- View monthly summaries
+- Calculate balances
+
+### Exchange Rates
+
+- Real-time currency conversion
+- Support for multiple currencies
+- Historical rate queries
+
+### Database
+
+- Thread-safe SQLite implementation
+- Connection pooling for better performance
+- Automatic table creation
+- Transaction management
 
 ## Contributing
 
-Feel free to submit issues and enhancement requests!
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Google Gemini API for AI capabilities
+- FastForex for exchange rate data
+- Tailwind CSS for the beautiful UI
+- Font Awesome for icons
