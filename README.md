@@ -1,6 +1,6 @@
 # Financial Assistant
 
-A modern web-based financial assistant that helps users manage their expenses, track income, and get real-time exchange rates using AI-powered conversations.
+A modern web-based financial assistant that helps users manage their expenses, track income, and get real-time exchange rates using AI-powered conversations. you can access the hosted one [here](https://function-calling-ai.onrender.com)
 
 ## Features
 
