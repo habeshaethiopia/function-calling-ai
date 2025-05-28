@@ -26,6 +26,7 @@ load_dotenv()
 
 class GeminiAgent:
     def __init__(self):
+        self.chat_history = deque(maxlen=5)
         self.api_key = os.getenv("GEMINI_API_KEY")
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY environment variable is not set")
@@ -133,27 +134,26 @@ class GeminiAgent:
     def _format_chat_history(self):
         """Format chat history for the model context"""
         formatted_history = []
-        for msg in self.chat_history:
+        for message in self.chat_history:
             formatted_history.append(
-                types.Content(
-                    role=msg["role"],
-                    parts=[types.Part.from_text(text=msg["content"])],
-                )
+                {"role": message["role"], "parts": [{"text": message["content"]}]}
             )
         return formatted_history
 
-    def process_message(self, message):
+    def process_message(self, message: str, user_id: int = None) -> dict:
         """
-        Process a user message and handle function calling
+        Process a user message and generate a response
 
         Args:
             message (str): The user's message
+            user_id (int, optional): The ID of the user sending the message
 
         Returns:
-            str: The response to the user
+            dict: The response containing the assistant's message
         """
         try:
-            logger.info(f"Processing message: {message}")
+            if not user_id:
+                return {"response": "Please log in to use this feature."}
 
             # Add user message to chat history
             self.chat_history.append({"role": "user", "content": message})
@@ -161,41 +161,47 @@ class GeminiAgent:
             # Get formatted chat history
             contents = self._format_chat_history()
 
+            # Add user context to the message if user_id is provided
+            context_message = f"[User ID: {user_id}] {message}"
+
+            # Generate response using the model
             response = self.client.models.generate_content(
                 model=self.model,
-                contents=contents,
-                config=types.GenerateContentConfig(tools=[self.tools], temperature=0),
+                contents=contents
+                + [{"role": "user", "parts": [{"text": context_message}]}],
+                config=types.GenerateContentConfig(
+                    tools=[self.tools],
+                    temperature=0.7,
+                    top_p=0.8,
+                    top_k=40,
+                    max_output_tokens=2048,
+                ),
             )
 
             if not hasattr(response, "candidates") or not response.candidates:
                 logger.warning("Empty response received from model")
-                return "I received an empty response from the model. Please try again."
+                return {
+                    "response": "I received an empty response from the model. Please try again."
+                }
 
             candidate = response.candidates[0]
-            logger.debug(f"Candidate type: {type(candidate)}")
-            logger.debug(f"Candidate attributes: {dir(candidate)}")
-
             if not hasattr(candidate, "content") or not candidate.content:
                 logger.warning("No content in candidate response")
-                return "I couldn't process the model's response. Please try again."
+                return {
+                    "response": "I couldn't process the model's response. Please try again."
+                }
 
             content = candidate.content
-            logger.debug(f"Content type: {type(content)}")
-            logger.debug(f"Content attributes: {dir(content)}")
-
             if not hasattr(content, "parts") or not content.parts:
                 logger.warning("No parts in content response")
-                return "The response format was unexpected. Please try again."
+                return {
+                    "response": "The response format was unexpected. Please try again."
+                }
 
+            response_text = ""
             for part in content.parts:
-                logger.debug(f"Part type: {type(part)}")
-                logger.debug(f"Part attributes: {dir(part)}")
-
                 if hasattr(part, "function_call") and part.function_call is not None:
                     function_call = part.function_call
-                    logger.debug(f"Function call type: {type(function_call)}")
-                    logger.debug(f"Function call attributes: {dir(function_call)}")
-
                     function_name = function_call.name
                     args = function_call.args
 
@@ -213,6 +219,9 @@ class GeminiAgent:
                                     args = {}
                             else:
                                 args = {}
+
+                    # Add user_id to args
+                    args["user_id"] = user_id
 
                     # If get_monthly_summary and year/month missing, use current year/month
                     if function_name == "get_monthly_summary":
@@ -233,45 +242,37 @@ class GeminiAgent:
                         result = self.functions.get_exchange_rate(**args)
                     else:
                         logger.warning(f"Unknown function called: {function_name}")
-                        return "I'm sorry, I don't know how to handle that function."
+                        return {
+                            "response": "I'm sorry, I don't know how to handle that function."
+                        }
 
                     # Generate a natural language response based on the function result
                     if result.get("success"):
                         if function_name in ["log_expense", "log_income"]:
-                            response = f"Successfully logged the transaction. {result['message']}"
+                            response_text = f"Successfully logged the transaction. {result['message']}"
                         elif function_name == "get_monthly_summary":
                             summary = result["summary"]
-                            response = f"Here's your monthly summary:\nIncome: ${summary['income']:.2f}\nExpenses: ${summary['expenses']:.2f}\nBalance: ${summary['balance']:.2f}\nTotal transactions: {summary['transactions']}"
+                            response_text = f"Here's your monthly summary:\nIncome: ${summary['income']:.2f}\nExpenses: ${summary['expenses']:.2f}\nBalance: ${summary['balance']:.2f}\nTotal transactions: {summary['transactions']}"
                         elif function_name == "get_exchange_rate":
                             rate = result["rate"]
-                            response = f"The exchange rate from {rate['from']} to {rate['to']} on {rate['date']} is {rate['rate']:.4f}"
+                            response_text = f"The exchange rate from {rate['from']} to {rate['to']} on {rate['date']} is {rate['rate']:.4f}"
                         logger.info(f"Function {function_name} executed successfully")
-
-                        # Add assistant response to chat history
-                        self.chat_history.append(
-                            {"role": "assistant", "content": response}
-                        )
-
-                        return response
                     else:
                         error_msg = f"I encountered an error: {result.get('error', 'Unknown error')}"
                         logger.error(f"Function {function_name} failed: {error_msg}")
-                        return error_msg
-
-            # If no function call was made, return the model's response
-            logger.info("No function call detected, returning model's response")
+                        return {"response": error_msg}
+                else:
+                    response_text = part.text
 
             # Add assistant response to chat history
-            self.chat_history.append({"role": "assistant", "content": response.text})
+            self.chat_history.append({"role": "assistant", "content": response_text})
 
-            return response.text
-
+            return {"response": response_text}
         except Exception as e:
-            import traceback
-
-            error_details = traceback.format_exc()
-            logger.error(f"Error processing message: {str(e)}\n{error_details}")
-            return f"I encountered an error: {str(e)}\nError details: {error_details}"
+            logger.error(f"Error processing message: {str(e)}")
+            return {
+                "response": "I apologize, but I encountered an error processing your message. Please try again."
+            }
 
 
 if __name__ == "__main__":

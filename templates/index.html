@@ -106,9 +106,12 @@
                         <i class="fas fa-wallet text-blue-600 text-2xl mr-2"></i>
                         <span class="text-xl font-semibold">Financial Assistant</span>
                     </div>
-                    <div class="flex items-center">
+                    <div class="flex items-center space-x-4">
                         <button id="clearChat" class="text-gray-600 hover:text-gray-900">
                             <i class="fas fa-trash-alt mr-2"></i>Clear Chat
+                        </button>
+                        <button id="logout" class="text-gray-600 hover:text-gray-900 ">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
                         </button>
                     </div>
                 </div>
@@ -276,39 +279,72 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
-        document.getElementById('chatForm').addEventListener('submit', async (e) => {
+        // Get session token from localStorage
+        function getSessionToken() {
+            return localStorage.getItem('sessionToken');
+        }
+
+        // Handle form submission
+        document.getElementById("chatForm").addEventListener("submit", async (e) => {
             e.preventDefault();
-            const userInput = document.getElementById('userInput');
-            const message = userInput.value.trim();
+
+            const messageInput = document.getElementById("userInput");
+            const message = messageInput.value.trim();
 
             if (!message) return;
 
-            // Add user message
+            // Get session token
+            const sessionToken = getSessionToken();
+            if (!sessionToken) {
+                window.location.href = '/login';
+                return;
+            }
+
+            // Add user message to chat
             addMessage(message, true);
-            userInput.value = '';
+            messageInput.value = "";
 
             // Show loading indicator
-            document.getElementById('loading').classList.add('active');
+            const loadingDiv = document.createElement("div");
+            loadingDiv.className = "flex justify-start mb-4";
+            loadingDiv.innerHTML = `
+                <div class="max-w-[70%] rounded-lg p-3 bg-gray-200 text-gray-800">
+                    <div class="flex space-x-2">
+                        <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-100"></div>
+                        <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-200"></div>
+                    </div>
+                </div>
+            `;
+            document.getElementById("messages").appendChild(loadingDiv);
 
             try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
+                const response = await fetch("/api/chat", {
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json'
+                        "Content-Type": "application/json",
+                        "X-Session-Token": sessionToken
                     },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify({ message }),
                 });
 
-                const data = await response.json();
+                // Remove loading indicator
+                loadingDiv.remove();
 
-                // Add assistant message
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('sessionToken');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
                 addMessage(data.response);
             } catch (error) {
-                console.error('Error:', error);
-                addMessage('Sorry, there was an error processing your request. Please try again.');
-            } finally {
-                // Hide loading indicator
-                document.getElementById('loading').classList.remove('active');
+                console.error("Error:", error);
+                addMessage("Sorry, I encountered an error. Please try again.");
             }
         });
 
@@ -327,6 +363,20 @@
                     </div>
                 </div>
             `;
+        });
+
+        // Add logout functionality
+        document.getElementById('logout').addEventListener('click', () => {
+            localStorage.removeItem('sessionToken');
+            window.location.href = '/login';
+        });
+
+        // Check authentication on page load
+        window.addEventListener('load', () => {
+            const sessionToken = getSessionToken();
+            if (!sessionToken) {
+                window.location.href = '/login';
+            }
         });
     </script>
 </body>
