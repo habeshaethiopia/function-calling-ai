@@ -3,6 +3,7 @@ from functions import FinancialFunctions
 import json
 import os
 from dotenv import load_dotenv
+import datetime
 
 load_dotenv()
 
@@ -14,7 +15,7 @@ class GeminiAgent:
             raise ValueError("GEMINI_API_KEY environment variable is not set")
 
         genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel("gemini-pro")
+        self.model = genai.GenerativeModel("gemini-2.0-flash")
         self.functions = FinancialFunctions()
 
         # Define function schemas for Gemini
@@ -127,7 +128,11 @@ class GeminiAgent:
             context = f"User ID: {user_id}\nUser message: {message}"
 
             # Generate response with function calling
-            response = self.model.generate_content(context, tools=self.function_schemas)
+            response = self.model.generate_content(
+                context,
+                generation_config={"temperature": 0.7, "top_p": 0.8, "top_k": 40},
+                tools=[{"function_declarations": self.function_schemas}],
+            )
 
             # Check if the response includes a function call
             if hasattr(response, "candidates") and response.candidates:
@@ -139,8 +144,18 @@ class GeminiAgent:
                             if hasattr(part, "function_call"):
                                 function_call = part.function_call
                                 function_name = function_call.name
-                                args = json.loads(function_call.args)
-
+                                args = function_call.args
+                                if not isinstance(args, dict):
+                                    try:
+                                        args = dict(args)
+                                    except Exception:
+                                        if isinstance(args, str) and args.strip():
+                                            try:
+                                                args = json.loads(args)
+                                            except Exception:
+                                                args = {}
+                                        else:
+                                            args = {}
                                 # Add user_id to function calls if not present
                                 if "user_id" not in args and function_name in [
                                     "log_expense",
@@ -148,6 +163,13 @@ class GeminiAgent:
                                     "get_monthly_summary",
                                 ]:
                                     args["user_id"] = user_id
+                                # If get_monthly_summary and year/month missing, use current year/month
+                                if function_name == "get_monthly_summary":
+                                    now = datetime.datetime.now()
+                                    if "year" not in args or not args["year"]:
+                                        args["year"] = now.year
+                                    if "month" not in args or not args["month"]:
+                                        args["month"] = now.month
 
                                 # Call the appropriate function
                                 if function_name == "log_expense":
