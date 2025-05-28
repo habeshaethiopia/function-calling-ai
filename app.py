@@ -14,7 +14,7 @@ db = Database()
 
 @app.route("/")
 def home():
-    return render_template("index.html", user=USER_CONFIG)
+    return render_template("index.html")
 
 
 @app.route("/api/chat", methods=["POST"])

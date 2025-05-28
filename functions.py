@@ -43,12 +43,12 @@ class FinancialFunctions:
             logger.error(f"Error logging expense: {str(e)}")
             return {"success": False, "error": str(e)}
 
-    def log_income(self, category, amount, date=None):
+    def log_income(self, source, amount, date=None):
         """
         Log an income transaction
 
         Args:
-            category (str): The category of the income
+            source (str): The category of the income
             amount (float): The amount of the income
             date (str, optional): The date of the income in YYYY-MM-DD format
 
@@ -58,11 +58,11 @@ class FinancialFunctions:
         try:
             transaction_id = self.storage.add_transaction(
                 type_=TransactionType.INCOME,
-                category=category,
+                category=source,
                 amount=float(amount),
                 date=date,
             )
-            logger.info(f"Logged income: {amount} in {category}")
+            logger.info(f"Logged income: {amount} in {source}")
             return {
                 "success": True,
                 "message": f"Income logged successfully with ID: {transaction_id}",

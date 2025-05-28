@@ -51,6 +51,48 @@
         .loading.active {
             display: flex;
         }
+
+        .mic-button {
+            transition: all 0.3s ease;
+        }
+
+        .mic-button.listening {
+            background-color: #ef4444;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .voice-status {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .voice-status.active {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 
@@ -124,11 +166,21 @@
                         <span class="ml-2 text-gray-600">Processing...</span>
                     </div>
 
+                    <!-- Voice Status -->
+                    <div id="voiceStatus" class="voice-status">
+                        <i class="fas fa-microphone-alt"></i>
+                        <span>Listening...</span>
+                    </div>
+
                     <!-- Input Form -->
                     <form id="chatForm" class="flex space-x-2">
                         <input type="text" id="userInput"
                             class="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:border-blue-500"
                             placeholder="Type your message here...">
+                        <button type="button" id="micButton"
+                            class="mic-button bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                            <i class="fas fa-microphone"></i>
+                        </button>
                         <button type="submit"
                             class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                             <i class="fas fa-paper-plane"></i>
@@ -140,6 +192,56 @@
     </div>
 
     <script>
+        // Voice Recognition Setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+        let isListening = false;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                isListening = true;
+                document.getElementById('micButton').classList.add('listening');
+                document.getElementById('voiceStatus').classList.add('active');
+            };
+
+            recognition.onend = () => {
+                isListening = false;
+                document.getElementById('micButton').classList.remove('listening');
+                document.getElementById('voiceStatus').classList.remove('active');
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('userInput').value = transcript;
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                isListening = false;
+                document.getElementById('micButton').classList.remove('listening');
+                document.getElementById('voiceStatus').classList.remove('active');
+            };
+        }
+
+        // Toggle voice recognition
+        document.getElementById('micButton').addEventListener('click', () => {
+            if (!recognition) {
+                alert('Speech recognition is not supported in your browser.');
+                return;
+            }
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        });
+
         function insertTemplate(text) {
             document.getElementById('userInput').value = text;
             document.getElementById('userInput').focus();
